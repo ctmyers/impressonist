@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:id="@+id/menuSine"
+        android:title="Sine"/>
+
+    <item android:id="@+id/menuSquare"
+        android:title="Square" />
+
+    <item android:id="@+id/menuArc"
+        android:title="Arc" />
+
+    <item android:id="@+id/menuVelocity"
+          android:title="Velocity" />
+
+
+
+</menu>
