@@ -51,22 +51,12 @@ public class ImpressionistView extends View {
 
     private Paint mPaint = new Paint();
     private int mBrushRadius = 20;
-    private Path mPath;
 
     private VelocityTracker mVelocityTracker = null;
-    private int mActivePointerId;
-
 
     private int mAlpha = 150;
-    private int mDefaultRadius = 25;
-    private Point mLastPoint = null;
-    private long mLastPointTime = -1;
-    private boolean mUseMotionSpeedForBrushStrokeSize = true;
     private Paint mPaintBorder = new Paint();
     private BrushType mBrushType = BrushType.Square;
-    private float mMinBrushRadius = 5;
-
-    private Brush mBrush;
 
 
     public ImpressionistView(Context context) {
@@ -107,10 +97,6 @@ public class ImpressionistView extends View {
         mPaintBorder.setStrokeWidth(3);
         mPaintBorder.setStyle(Paint.Style.STROKE);
         mPaintBorder.setAlpha(50);
-
-        mBrush = new CircleBrush();
-
-        mLastPoint = new Point(0,0);
 
         //mPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.MULTIPLY));
     }
@@ -159,8 +145,6 @@ public class ImpressionistView extends View {
         invalidate();
     }
 
-
-
     @Override
     public void onDraw(Canvas canvas) {
         super.onDraw(canvas);
@@ -175,40 +159,33 @@ public class ImpressionistView extends View {
 
     //https://developer.android.com/training/gestures/movement.html
     //https://developer.android.com/training/gestures/multi.html
-    //https://developer.android.com/training/gestures/scale.html <<<<<<<<<<------------------------------------------------------------------------------------------------------------------------------
+    //https://developer.android.com/training/gestures/scale.html
     //http://stackoverflow.com/questions/11966692/android-smooth-multi-touch-drawing
     @Override
     public boolean onTouchEvent(MotionEvent motionEvent){
 
-        //TODO
         //Basically, the way this works is to listen for Touch Down and Touch Move events and determine where those
         //touch locations correspond to the bitmap in the ImageView. You can then grab info about the bitmap--like the pixel color--
         //at that location
 
-        // Taken from my doodler code
         super.onTouchEvent(motionEvent);
 
         final int action = MotionEventCompat.getActionMasked(motionEvent);
 
-        //motionEvent.getPointerCount();
-
-
         switch (action) {
             case MotionEvent.ACTION_DOWN:{
 
-
+                //go through list of all pointers
                 for (int size = motionEvent.getPointerCount(), pointerIndex = 0; pointerIndex < size; pointerIndex++) {
 
-
-                    //final int pointerIndex = MotionEventCompat.getActionIndex(motionEvent);
-                    //mActivePointerId = motionEvent.getPointerId(pointerIndex);
-
+                    //check the user is touching inside the canvas
                     float curTouchX = MotionEventCompat.getX(motionEvent, pointerIndex);
                     float curTouchY = MotionEventCompat.getY(motionEvent, pointerIndex);
                     Rect rect = new Rect(getBitmapPositionInsideImageView(mImageView));
                     if (!rect.contains((int) curTouchX, (int) curTouchY))
                         return true;
 
+                    //update the velocity tracker
                     if (mVelocityTracker == null) {
                         mVelocityTracker = VelocityTracker.obtain();
                     } else {
@@ -218,65 +195,36 @@ public class ImpressionistView extends View {
                 }
                 break;
             }
-            case MotionEvent.ACTION_POINTER_DOWN:{
-                break;
-            }
             case MotionEvent.ACTION_MOVE: {
-                if (mImage != null) {
+                if (mImage != null) { //make sure mImage is set before doing anything
 
+                    //go through the pointers
                     for (int size = motionEvent.getPointerCount(), pointerIndex = 0; pointerIndex < size; pointerIndex++) {
 
+                        //get the current touch position and make sure its in the canvas
                         float curTouchX = MotionEventCompat.getX(motionEvent, pointerIndex);
                         float curTouchY = MotionEventCompat.getY(motionEvent, pointerIndex);
                         Rect rect = new Rect(getBitmapPositionInsideImageView(mImageView));
                         if (!rect.contains((int) curTouchX, (int) curTouchY))
                             return true;
 
+                        //update the velocity tracker
                         mVelocityTracker.addMovement(motionEvent);
                         mVelocityTracker.computeCurrentVelocity(1000);
-                        float vx = VelocityTrackerCompat.getXVelocity(mVelocityTracker, mActivePointerId);
-                        float vy = VelocityTrackerCompat.getYVelocity(mVelocityTracker, mActivePointerId);
+                        float vx = VelocityTrackerCompat.getXVelocity(mVelocityTracker, pointerIndex);
+                        float vy = VelocityTrackerCompat.getYVelocity(mVelocityTracker, pointerIndex);
 
+
+                        //paints the historical points
                         int historySize = motionEvent.getHistorySize();
-
                         for (int i = 0; i < historySize; i++) {
                             float touchX = motionEvent.getHistoricalX(pointerIndex, i);
                             float touchY = motionEvent.getHistoricalY(pointerIndex, i);
-                            paintOnCanvus(touchX, touchY, vx, vy);
+                            paintOnCanvas(touchX, touchY, vx, vy);
                         }
-                        paintOnCanvus(curTouchX, curTouchY, vx, vy);
+                        //paints the current points
+                        paintOnCanvas(curTouchX, curTouchY, vx, vy);
                     }
-                }
-                break;
-            }
-            case MotionEvent.ACTION_UP:
-                mActivePointerId = INVALID_POINTER_ID;
-                break;
-            case MotionEvent.ACTION_CANCEL:
-                mActivePointerId = INVALID_POINTER_ID;
-                mVelocityTracker.recycle();
-                break;
-            case MotionEvent.ACTION_POINTER_UP: {
-
-                final int pointerIndex = MotionEventCompat.getActionIndex(motionEvent);
-                final int pointerId = MotionEventCompat.getPointerId(motionEvent, pointerIndex);
-
-                if (pointerId == mActivePointerId) {
-                    // This was our active pointer going up. Choose a new
-                    // active pointer and adjust accordingly.
-                    final int newPointerIndex = pointerIndex == 0 ? 1 : 0;
-
-                    mVelocityTracker.addMovement(motionEvent);
-                    mVelocityTracker.computeCurrentVelocity(1000);
-                    float vx = VelocityTrackerCompat.getXVelocity(mVelocityTracker, mActivePointerId);
-                    float vy = VelocityTrackerCompat.getYVelocity(mVelocityTracker, mActivePointerId);
-
-                    float curTouchX = MotionEventCompat.getX(motionEvent, newPointerIndex);
-                    float curTouchY = MotionEventCompat.getY(motionEvent, newPointerIndex);
-
-                    paintOnCanvus(curTouchX, curTouchY, vx, vy);
-
-                    mActivePointerId = MotionEventCompat.getPointerId(motionEvent, newPointerIndex);
                 }
                 break;
             }
@@ -290,8 +238,8 @@ public class ImpressionistView extends View {
 
     // returns the points of the bitmap
     private static Point getBitmapPoints(float x, float y, ImpressionistView impView, Bitmap bit){
-        int newX = 0;
-        int newY = 0;
+        int newX;
+        int newY;
 
         int imgViewW = bit.getWidth();
         int imgViewH = bit.getHeight();
@@ -312,7 +260,7 @@ public class ImpressionistView extends View {
      *  - http://stackoverflow.com/a/15538856
      *  - http://stackoverflow.com/a/26930938
      * @param imageView
-     * @return
+     * @return Rect
      */
     private static Rect getBitmapPositionInsideImageView(ImageView imageView){
         Rect rect = new Rect();
@@ -344,53 +292,44 @@ public class ImpressionistView extends View {
         int imgViewW = imageView.getWidth();
         int imgViewH = imageView.getHeight();
 
-        int top = (int) (imgViewH - heightActual)/2;
-        int left = (int) (imgViewW - widthActual)/2;
+        int top = (imgViewH - heightActual) /2;
+        int left = (imgViewW - widthActual) /2;
 
         rect.set(left, top, left + widthActual, top + heightActual);
 
         return rect;
     }
 
-    private Paint getNewPaint(){
-        Paint paint = new Paint();
-        paint.setColor(Color.RED);
-        paint.setAlpha(mAlpha);
-        paint.setAntiAlias(true);
-        paint.setStyle(Paint.Style.FILL);
-        paint.setStrokeWidth(4);
-        return paint;
-    }
-
     public Bitmap getBitmap(){
         return mOffScreenBitmap;
     }
 
-    private boolean paintOnCanvus(float x, float y, float vx, float vy){
-        Paint paint = getNewPaint();
+
+    // Paints the coordinate on the mOffscreenbitmap
+    private boolean paintOnCanvas(float x, float y, float vx, float vy){
 
         int color;
         int r;
         int g;
         int b;
 
+        //makes sure we are in bounds
         if(y > this.getHeight() || y <= 0 || x > this.getWidth() || x <= 0)
             return true;
         Rect rect = new Rect(getBitmapPositionInsideImageView(mImageView));
         if(!rect.contains((int)x, (int)y))
             return true;
 
+        //get the color from the correct location
         Point p = getBitmapPoints(x,y,this, mImage);
         color = mImage.getPixel(p.x, p.y);
-
-
         r = Color.red(color);
         g = Color.green(color);
         b = Color.blue(color);
-
         mPaint.setARGB(150, r,g,b);
 
-        float rad = 0;
+        // paints the coordinate depending on the selected brushtype
+        float rad;
 
         switch(mBrushType){
             case Square:

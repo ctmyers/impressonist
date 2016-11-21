@@ -213,7 +213,7 @@ public class MainActivity extends AppCompatActivity implements OnMenuItemClickLi
         }
     }
 
-
+    // saves the image to the gallery, taken from onComplete() above
     public void saveImage(){
         Bitmap bitmap = mImpressionistView.getBitmap();
 
