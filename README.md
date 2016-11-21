@@ -15,7 +15,7 @@ Impressionist app for cmsc434
 * Hit the "Save" button to save the image to the phone's gallary
 
 # Youtube:
-
+https://youtu.be/-fuu0FF5Crs
 
 # Sources
 
